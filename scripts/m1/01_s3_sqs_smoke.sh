@@ -2,18 +2,25 @@
 # M1/01: S3 bucket, SQS queue + DLQ with RedrivePolicy, send/receive/delete.
 set -euo pipefail
 . "$(dirname "$0")/_env.sh"
+TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 
 aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null || aws s3 mb "s3://$BUCKET"
 
-# Low visibility timeout so the redrive probe below loops fast.
+# Fresh start for the redrive probe: clear leftovers from earlier runs.
 MAIN_URL=$(aws sqs create-queue --queue-name "$QUEUE" \
   --attributes VisibilityTimeout=0 --query QueueUrl --output text)
 DLQ_URL=$(aws sqs create-queue --queue-name "$DLQ" --query QueueUrl --output text)
+aws sqs purge-queue --queue-url "$MAIN_URL"
+aws sqs purge-queue --queue-url "$DLQ_URL"
 DLQ_ARN=$(aws sqs get-queue-attributes --queue-url "$DLQ_URL" \
   --attribute-names QueueArn --query 'Attributes.QueueArn' --output text)
 
+# RedrivePolicy goes through a file: embedded double quotes in CLI args are
+# mangled between MSYS bash and native aws.exe on Windows.
+printf '{"RedrivePolicy":"{\\"deadLetterTargetArn\\":\\"%s\\",\\"maxReceiveCount\\":3}"}' \
+  "$DLQ_ARN" > "$TMP/redrive.json"
 aws sqs set-queue-attributes --queue-url "$MAIN_URL" \
-  --attributes RedrivePolicy="{\"deadLetterTargetArn\":\"$DLQ_ARN\",\"maxReceiveCount\":3}"
+  --attributes "$(winfile "$TMP/redrive.json")"
 pass "queue + DLQ with RedrivePolicy created"
 
 aws sqs send-message --queue-url "$MAIN_URL" --message-body '{"jobId":"m1-01"}'

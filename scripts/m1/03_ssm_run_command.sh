@@ -2,15 +2,7 @@
 # M1/03: SSM Run Command — success, failure (exit 1), and cancel of a long command.
 set -euo pipefail
 . "$(dirname "$0")/_env.sh"
-
-AMI="${CLOUDRUN_AMI:-$(aws ec2 describe-images --query 'Images[0].ImageId' --output text)}"
-IID=$(aws ec2 run-instances --image-id "$AMI" --instance-type t3.micro \
-  --client-token "m1-03-$RANDOM" \
-  --tag-specifications 'ResourceType=instance,Tags=[{Key=cloudrun:managed,Value=true}]' \
-  --query 'Instances[0].InstanceId' --output text)
-trap 'aws ec2 terminate-instances --instance-ids "$IID" >/dev/null 2>&1 || true' EXIT
-aws ec2 wait instance-running --instance-ids "$IID"
-echo "instance: $IID"
+TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 
 wait_command() { # $1 = command id → echoes terminal state
   for _ in $(seq 1 60); do
@@ -25,10 +17,42 @@ wait_command() { # $1 = command id → echoes terminal state
 }
 
 send() { # $1 = shell command → echoes command id
+  json_commands "$TMP/params.json" "$1"
   aws ssm send-command --document-name AWS-RunShellScript \
-    --instance-ids "$IID" --parameters "commands=[$1]" \
+    --instance-ids "$IID" --parameters "$(winfile "$TMP/params.json")" \
     --query Command.CommandId --output text
 }
+
+AMI="${CLOUDRUN_AMI:-$(aws ec2 describe-images --query 'Images[0].ImageId' --output text)}"
+IID=$(aws ec2 run-instances --image-id "$AMI" --instance-type t3.micro \
+  --client-token "m1-03-$RANDOM" \
+  --tag-specifications 'ResourceType=instance,Tags=[{Key=cloudrun:managed,Value=true}]' \
+  --query 'Instances[0].InstanceId' --output text)
+trap 'aws ec2 terminate-instances --instance-ids "$IID" >/dev/null 2>&1 || true' EXIT
+aws ec2 wait instance-running --instance-ids "$IID"
+echo "instance: $IID"
+ONLINE=$(aws ssm describe-instance-information \
+  --query "InstanceInformationList[?InstanceId=='$IID'].PingStatus" --output text 2>/dev/null || echo "")
+for _ in $(seq 1 15); do
+  [ "$ONLINE" = "Online" ] && break
+  sleep 4
+  ONLINE=$(aws ssm describe-instance-information \
+    --query "InstanceInformationList[?InstanceId=='$IID'].PingStatus" --output text 2>/dev/null || echo "")
+done
+if [ "$ONLINE" = "Online" ]; then
+  pass "SSM agent Online"
+elif [ -z "$ONLINE" ]; then
+  json_commands "$TMP/params.json" 'true'
+  CID=$(aws ssm send-command --document-name AWS-RunShellScript \
+    --instance-ids "$IID" --parameters "$(winfile "$TMP/params.json")" \
+    --query Command.CommandId --output text)
+  S=$(wait_command "$CID")
+  [ "$S" = "Success" ] \
+    && pass "SSM agent reachable (describe-instance-information empty, command ran)" \
+    || fail "SSM agent unreachable"
+else
+  fail "SSM agent status: $ONLINE"
+fi
 
 CID=$(send 'echo hello')
 STATE=$(wait_command "$CID")
@@ -51,5 +75,14 @@ aws ssm cancel-command --command-id "$CID" 2>/dev/null \
   && pass "cancel-command accepted" || fail "cancel-command rejected"
 STATE=$(wait_command "$CID")
 echo "cancelled command state: $STATE (expected Cancelled)"
+
+# executionTimeout → TimedOut (API minimum for TimeoutSeconds is 30)
+json_commands "$TMP/params.json" 'sleep 90'
+CID=$(aws ssm send-command --document-name AWS-RunShellScript \
+  --instance-ids "$IID" --parameters "$(winfile "$TMP/params.json")" \
+  --timeout-seconds 30 --query Command.CommandId --output text)
+STATE=$(wait_command "$CID")
+[ "$STATE" = "TimedOut" ] && pass "executionTimeout → TimedOut" \
+  || fail "expected TimedOut, got $STATE"
 
 echo "finding: SSM status mapping (Success/Failed/Cancelled/TimedOut), agent Online flow → docs/floci-findings.md"

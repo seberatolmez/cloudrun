@@ -11,3 +11,18 @@ export DLQ="${DLQ:-cloudrun-jobs-dlq}"
 
 pass() { echo "PASS: $1"; }
 fail() { echo "FAIL: $1"; }
+
+# Write SSM parameters JSON {"commands":[...]} for a file:// argument.
+# Needed because embedded double quotes in CLI args are mangled between
+# MSYS bash and the native aws.exe on Windows.
+json_commands() { # $1 = output file, rest = command strings
+  python - "$@" <<'PY'
+import json, sys
+out, cmds = sys.argv[1], sys.argv[2:]
+with open(out, "w") as f:
+    json.dump({"commands": cmds}, f)
+PY
+}
+
+# Windows-safe path for an aws file:// argument.
+winfile() { echo "file://$(cygpath -m "$1")"; }
