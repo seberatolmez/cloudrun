@@ -1,0 +1,19 @@
+services:
+  floci:
+    image: floci/floci:latest
+    ports:
+      - "4566:4566"
+    volumes:
+      # Required: EC2 instances run as real Docker containers
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      FLOCI_STORAGE_MODE: memory
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cloudrun
+      POSTGRES_PASSWORD: cloudrun
+      POSTGRES_DB: cloudrun
+    ports:
+      - "5432:5432"
