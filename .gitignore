@@ -1,0 +1,15 @@
+# Working plan doc stays local, not part of the public repo
+/PLAN.md
+
+# Java / Maven (M2+)
+target/
+*.class
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Local state
+data/
+.env
