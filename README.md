@@ -37,6 +37,3 @@ executes all spike scenarios end to end:
 make up
 make m1
 ```
-
-Findings (what works in Floci, what doesn't) are recorded in
-[`docs/floci-findings.md`](docs/floci-findings.md).

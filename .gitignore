@@ -1,5 +1,7 @@
 # Working plan doc stays local, not part of the public repo
 /PLAN.md
+# M1 findings are working notes, not public docs
+/docs/floci-findings.md
 
 # Java / Maven (M2+)
 target/
