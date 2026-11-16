@@ -17,4 +17,7 @@ m1: ## Run all M1 spike scenarios in order
 	./scripts/m1/04_instance_to_s3.sh
 	./scripts/m1/05_script_flow.sh
 
-.PHONY: up down ps m1
+test: ## Run unit + integration tests (Floci tests skip when the stack is down)
+	./mvnw test
+
+.PHONY: up down ps m1 test
