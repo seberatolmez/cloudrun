@@ -26,15 +26,7 @@ not committed.
 
 ## Status
 
-| Milestone | Description | State |
-|---|---|---|
-| M1 | Probe Floci (local AWS emulator) with AWS CLI | in progress |
-| M2 | API + PostgreSQL + SQS skeleton with fake compute | planned |
-| M3 | Real EC2 + SSM adapters (AWS SDK v2) | planned |
-| M4 | S3 artifacts + result API | planned |
-| M5 | Reliability mechanisms | planned |
-| M6 | Terraform + CI | planned |
-| M7 | Real-AWS smoke test + showcase README | planned |
+Current phase: **M1 — probing Floci with AWS CLI** (updated at the end of each phase).
 
 ## Quickstart (M1 spike)
 
@@ -45,6 +37,3 @@ executes all spike scenarios end to end:
 make up
 make m1
 ```
-
-Findings (what works in Floci, what doesn't) are recorded in
-[`docs/floci-findings.md`](docs/floci-findings.md).
