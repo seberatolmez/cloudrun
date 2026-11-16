@@ -47,10 +47,13 @@ public class JobService {
                 null, null, null, null, null, null, null);
         repo.insert(job);
 
-        jobQueue.send(id);
+        // QUEUED must be committed before the message goes out, otherwise the poller
+        // can receive it while the row is still PENDING, fail the conditional claim,
+        // and delete it. If send fails the job sits QUEUED until the M5 Reconciler requeues it.
         if (!repo.markQueued(id)) {
             log.warn("Job {} could not move PENDING->QUEUED; stays PENDING (M5 Reconciler will requeue)", id);
         }
+        jobQueue.send(id);
         log.info("Job {} accepted (timeout {}s)", id, timeout);
         return new CreateResult(id, repo.find(id).orElseThrow().status());
     }

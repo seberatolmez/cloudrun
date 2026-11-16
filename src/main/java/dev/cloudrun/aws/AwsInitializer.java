@@ -52,12 +52,14 @@ public class AwsInitializer implements ApplicationRunner {
                 return;
             } catch (Exception e) {
                 if (attempt == ATTEMPTS) {
-                    throw new IllegalStateException("AWS resources not reachable after "
-                            + ATTEMPTS + " attempts", e);
+                    // Degrade instead of failing startup: SQS/S3 calls will fail until the
+                    // endpoint is back; the poller logs each failed cycle meanwhile.
+                    log.error("AWS bootstrap failed after {} attempts: {}", ATTEMPTS, e.toString());
+                } else {
+                    log.warn("AWS bootstrap attempt {} failed ({}), retrying in {} ms",
+                            attempt, e.getMessage(), RETRY_BACKOFF_MILLIS);
+                    sleep();
                 }
-                log.warn("AWS bootstrap attempt {} failed ({}), retrying in {} ms",
-                        attempt, e.getMessage(), RETRY_BACKOFF_MILLIS);
-                sleep();
             }
         }
     }

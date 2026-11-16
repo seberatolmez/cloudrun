@@ -9,6 +9,7 @@ import dev.cloudrun.port.RemoteExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -18,6 +19,7 @@ import java.util.UUID;
  * Terminate runs in finally so a failed script or crash path never leaks an instance.
  */
 @Component
+@ConditionalOnProperty(prefix = "cloudrun.worker", name = "enabled", havingValue = "true")
 public class JobExecutor {
 
     private static final Logger log = LoggerFactory.getLogger(JobExecutor.class);

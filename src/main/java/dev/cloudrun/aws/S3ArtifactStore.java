@@ -25,8 +25,4 @@ public class S3ArtifactStore implements ArtifactStore {
         s3.putObject(builder -> builder.bucket(bucket).key(scriptKey(jobId)),
                 RequestBody.fromString(script, StandardCharsets.UTF_8));
     }
-
-    public static String scriptKey(UUID jobId) {
-        return "jobs/" + jobId + "/script.py";
-    }
 }

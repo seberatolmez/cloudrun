@@ -89,8 +89,8 @@ public class SqsPoller {
     void process(JobQueue.QueueMessage message) {
         UUID jobId;
         try {
-            jobId = mapper.readTree(message.body()).path("jobId").isEmpty()
-                    ? null : UUID.fromString(mapper.readTree(message.body()).path("jobId").asText());
+            String raw = mapper.readTree(message.body()).path("jobId").asText(null);
+            jobId = raw == null ? null : UUID.fromString(raw);
         } catch (Exception e) {
             // shortcut: poison payloads get deleted here; DLQ + DlqDrainer handling comes in M5
             log.warn("Unparseable message {} dropped: {}", message.messageId(), e.toString());

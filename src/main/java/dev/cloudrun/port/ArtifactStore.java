@@ -5,5 +5,9 @@ import java.util.UUID;
 /** Port for storing job artifacts (script for now; stdout/stderr/exit code come in M4). */
 public interface ArtifactStore {
 
+    default String scriptKey(UUID jobId) {
+        return "jobs/" + jobId + "/script.py";
+    }
+
     void uploadScript(UUID jobId, String script);
 }
