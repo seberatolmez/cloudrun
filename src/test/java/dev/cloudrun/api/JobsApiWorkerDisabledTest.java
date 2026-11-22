@@ -1,5 +1,6 @@
 package dev.cloudrun.api;
 
+import dev.cloudrun.testsupport.Floci;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,13 +15,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.sqs.SqsClient;
 
-import java.net.URI;
-import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 
@@ -47,17 +42,7 @@ class JobsApiWorkerDisabledTest {
 
     @BeforeAll
     static void assumeFlociRunning() {
-        try (SqsClient probe = SqsClient.builder()
-                .region(Region.US_EAST_1)
-                .endpointOverride(URI.create("http://localhost:4566"))
-                .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create("t", "t")))
-                .overrideConfiguration(c -> c.apiCallTimeout(Duration.ofSeconds(3)))
-                .build()) {
-            probe.listQueues();
-        } catch (Exception e) {
-            org.junit.jupiter.api.Assumptions.abort(
-                    "Floci is not reachable on localhost:4566 — start it with `make up`");
-        }
+        Floci.assumeRunning();
     }
 
     @Test
