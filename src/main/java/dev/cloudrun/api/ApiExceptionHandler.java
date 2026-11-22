@@ -5,65 +5,65 @@ import dev.cloudrun.job.JobNotFoundException;
 import dev.cloudrun.job.JobResultNotReadyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Extends Spring's base handler so framework errors (bad path variable, unknown route,
+ * unreadable body, wrong method) keep their 4xx status as ProblemDetail instead of
+ * falling into the catch-all 500.
+ */
 @RestControllerAdvice
-public class ApiExceptionHandler {
+public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
     @ExceptionHandler(JobNotFoundException.class)
-    public ResponseEntity<org.springframework.http.ProblemDetail> notFound(JobNotFoundException e) {
-        var problem = org.springframework.http.ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
-        problem.setTitle("Job not found");
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
+    public ResponseEntity<ProblemDetail> notFound(JobNotFoundException e) {
+        return problem(HttpStatus.NOT_FOUND, "Job not found", e.getMessage());
     }
 
     @ExceptionHandler(JobResultNotReadyException.class)
-    public ResponseEntity<org.springframework.http.ProblemDetail> notReady(JobResultNotReadyException e) {
-        var problem = org.springframework.http.ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
-        problem.setTitle("Job not finished");
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(problem);
+    public ResponseEntity<ProblemDetail> notReady(JobResultNotReadyException e) {
+        return problem(HttpStatus.CONFLICT, "Job not finished", e.getMessage());
     }
 
     @ExceptionHandler(InvalidJobException.class)
-    public ResponseEntity<org.springframework.http.ProblemDetail> invalidJob(InvalidJobException e) {
-        var problem = org.springframework.http.ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
-        problem.setTitle("Invalid job");
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problem);
+    public ResponseEntity<ProblemDetail> invalidJob(InvalidJobException e) {
+        return problem(HttpStatus.BAD_REQUEST, "Invalid job", e.getMessage());
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<org.springframework.http.ProblemDetail> beanValidation(MethodArgumentNotValidException e) {
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException e, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         Map<String, String> errors = new LinkedHashMap<>();
         e.getBindingResult().getFieldErrors().forEach(f -> errors.put(f.getField(), f.getDefaultMessage()));
-        var problem = org.springframework.http.ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Request validation failed");
+        var problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Request validation failed");
         problem.setTitle("Invalid request");
         problem.setProperty("errors", errors);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problem);
-    }
-
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<org.springframework.http.ProblemDetail> unreadable(HttpMessageNotReadableException e) {
-        var problem = org.springframework.http.ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Malformed request body");
-        problem.setTitle("Invalid request");
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problem);
+        return ResponseEntity.badRequest().body(problem);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<org.springframework.http.ProblemDetail> unexpected(Exception e) {
+    public ResponseEntity<ProblemDetail> unexpected(Exception e) {
         log.error("Unhandled exception", e);
-        var problem = org.springframework.http.ProblemDetail.forStatusAndDetail(
-                HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error");
-        problem.setTitle("Internal error");
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problem);
+        return problem(HttpStatus.INTERNAL_SERVER_ERROR, "Internal error", "Unexpected error");
+    }
+
+    private static ResponseEntity<ProblemDetail> problem(HttpStatus status, String title, String detail) {
+        var problem = ProblemDetail.forStatusAndDetail(status, detail);
+        problem.setTitle(title);
+        return ResponseEntity.status(status).body(problem);
     }
 }

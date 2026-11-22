@@ -55,7 +55,7 @@ class JobsApiWorkerDisabledTest {
                 .build()) {
             probe.listQueues();
         } catch (Exception e) {
-            throw new org.junit.AssumptionViolatedException(
+            org.junit.jupiter.api.Assumptions.abort(
                     "Floci is not reachable on localhost:4566 — start it with `make up`");
         }
     }

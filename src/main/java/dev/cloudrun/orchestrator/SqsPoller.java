@@ -12,6 +12,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -27,6 +28,7 @@ import java.util.concurrent.Semaphore;
 public class SqsPoller {
 
     private static final Logger log = LoggerFactory.getLogger(SqsPoller.class);
+    private static final long POLL_ERROR_BACKOFF_MILLIS = 1000;
 
     private final JobQueue queue;
     private final JobRepository repo;
@@ -67,8 +69,18 @@ public class SqsPoller {
     private void pollLoop() {
         while (running) {
             try {
-                for (var message : queue.receive(maxConcurrentJobs, pollWaitSeconds)) {
-                    permits.acquire();
+                // Only take what we can start now, so received messages don't sit past their visibility timeout
+                permits.acquire();
+                int free = 1 + permits.drainPermits();
+                List<JobQueue.QueueMessage> messages;
+                try {
+                    messages = queue.receive(free, pollWaitSeconds);
+                } catch (RuntimeException e) {
+                    permits.release(free);
+                    throw e;
+                }
+                permits.release(free - messages.size());
+                for (var message : messages) {
                     workers.submit(() -> {
                         try {
                             process(message);
@@ -82,6 +94,12 @@ public class SqsPoller {
                 return;
             } catch (Exception e) {
                 log.warn("Poll cycle failed: {}", e.toString());
+                try {
+                    Thread.sleep(POLL_ERROR_BACKOFF_MILLIS);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
             }
         }
     }

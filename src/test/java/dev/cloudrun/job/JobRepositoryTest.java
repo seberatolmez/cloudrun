@@ -59,6 +59,22 @@ class JobRepositoryTest {
     }
 
     @Test
+    void claimWinsRaceAgainstMarkQueued() {
+        UUID id = UUID.randomUUID();
+        repo.insert(newJob(id));
+        // Poller received the message before the API committed PENDING -> QUEUED
+        assertThat(repo.claim(id)).isTrue();
+        assertThat(repo.markQueued(id)).isFalse();
+        assertThat(repo.find(id).orElseThrow().status()).isEqualTo(JobStatus.PROVISIONING);
+        assertThat(repo.claim(id)).isFalse();
+    }
+
+    @Test
+    void claimOfUnknownJobIsFalse() {
+        assertThat(repo.claim(UUID.randomUUID())).isFalse();
+    }
+
+    @Test
     void markQueuedOnlyFromPending() {
         UUID id = UUID.randomUUID();
         repo.insert(newJob(id));

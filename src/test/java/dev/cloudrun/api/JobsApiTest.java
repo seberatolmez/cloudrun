@@ -61,7 +61,7 @@ class JobsApiTest {
                 .build()) {
             probe.listQueues();
         } catch (Exception e) {
-            throw new org.junit.AssumptionViolatedException(
+            org.junit.jupiter.api.Assumptions.abort(
                     "Floci is not reachable on localhost:4566 — start it with `make up`");
         }
     }
@@ -108,6 +108,26 @@ class JobsApiTest {
                 "name", "tiny", "runtime", "python", "script", "print(1)", "timeoutSeconds", 0));
         assert400("script_too_large", Map.of(
                 "name", "big", "runtime", "python", "script", "x".repeat(70_000), "timeoutSeconds", 120));
+    }
+
+    @Test
+    void omittedTimeoutDefaultsAndIsAccepted() {
+        var response = post(Map.of("name", "no-timeout", "runtime", "python", "script", "print(1)"),
+                CreateJobResponse.class);
+        assertThat(response.getStatusCode().value()).isEqualTo(202);
+    }
+
+    @Test
+    void malformedJobIdReturns400NotServerError() {
+        var response = http.getForEntity("/jobs/not-a-uuid", String.class);
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        assertThat(response.getHeaders().getContentType().toString()).contains("application/problem+json");
+    }
+
+    @Test
+    void unknownRouteReturns404NotServerError() {
+        var response = http.getForEntity("/no-such-route", String.class);
+        assertThat(response.getStatusCode().value()).isEqualTo(404);
     }
 
     @Test
