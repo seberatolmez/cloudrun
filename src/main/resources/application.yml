@@ -26,7 +26,7 @@ cloudrun:
     instance-s3-endpoint: http://host.docker.internal:4566
   worker:
     enabled: true
-    compute: fake
+    compute: aws
     max-concurrent-jobs: 3
     poll-wait-seconds: 10
     provisioning-timeout-seconds: 180
