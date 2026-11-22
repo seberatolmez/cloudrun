@@ -39,11 +39,7 @@ public class JobRepository {
         return transition(jobId, JobStatus.PENDING, JobStatus.QUEUED);
     }
 
-    /**
-     * PENDING|QUEUED -> PROVISIONING. Bumps attempt_count and sets started_at; false when someone
-     * else claimed the job. PENDING is accepted because a message only exists once it was sent,
-     * and the poller can receive it before the API commits markQueued.
-     */
+    /** PENDING|QUEUED -> PROVISIONING. Bumps attempt_count and sets started_at; false when someone else claimed the job. */
     public boolean claim(UUID jobId) {
         return tx.execute(status -> {
             var current = jdbc.sql("SELECT status FROM jobs WHERE id = ? FOR UPDATE")

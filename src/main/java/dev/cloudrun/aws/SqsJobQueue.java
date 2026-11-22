@@ -18,7 +18,6 @@ public class SqsJobQueue implements JobQueue {
 
     private final SqsClient sqs;
     private final ObjectMapper mapper = new ObjectMapper();
-    // Written by the startup thread, read by the poller thread
     private volatile String queueUrl;
 
     public SqsJobQueue(SqsClient sqs) {

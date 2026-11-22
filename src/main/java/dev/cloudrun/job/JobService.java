@@ -47,8 +47,6 @@ public class JobService {
                 null, null, null, null, null, null, null);
         repo.insert(job);
 
-        // Send before markQueued: if send fails the row stays PENDING, which is what the
-        // Reconciler requeues (plan §7.2). The poller may claim it first; claim accepts PENDING.
         jobQueue.send(id);
         if (!repo.markQueued(id)) {
             log.debug("Job {} already claimed before markQueued", id);

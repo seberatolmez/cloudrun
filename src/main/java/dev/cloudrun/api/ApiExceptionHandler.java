@@ -19,11 +19,6 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Extends Spring's base handler so framework errors (bad path variable, unknown route,
- * unreadable body, wrong method) keep their 4xx status as ProblemDetail instead of
- * falling into the catch-all 500.
- */
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 

@@ -69,7 +69,6 @@ public class SqsPoller {
     private void pollLoop() {
         while (running) {
             try {
-                // Only take what we can start now, so received messages don't sit past their visibility timeout
                 permits.acquire();
                 int free = 1 + permits.drainPermits();
                 List<JobQueue.QueueMessage> messages;

@@ -7,7 +7,6 @@ public enum JobStatus {
     PENDING, QUEUED, PROVISIONING, RUNNING, COLLECTING_RESULTS, SUCCEEDED, FAILED, TIMED_OUT;
 
     private static final Map<JobStatus, Set<JobStatus>> ALLOWED = Map.of(
-            // PENDING -> PROVISIONING: the poller can win the race against markQueued
             PENDING, Set.of(QUEUED, PROVISIONING),
             QUEUED, Set.of(PROVISIONING),
             PROVISIONING, Set.of(RUNNING, QUEUED, FAILED),
