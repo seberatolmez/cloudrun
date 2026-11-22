@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: cloudrun
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cloudrun
+    username: cloudrun
+    password: cloudrun
+
+logging:
+  pattern:
+    # MDC jobId is set by the orchestrator while processing a job
+    console: "%d{HH:mm:ss.SSS} %-5level [%X{jobId:-}] %logger{36} - %msg%n"
+
+cloudrun:
+  aws:
+    # Empty for real AWS; localhost Floci for local development (M1 findings)
+    endpoint-override: http://localhost:4566
+    region: us-east-1
+    bucket: cloudrun-artifacts
+    queue-name: cloudrun-jobs
+    dlq-name: cloudrun-jobs-dlq
+  worker:
+    enabled: true
+    max-concurrent-jobs: 3
+    poll-wait-seconds: 10
+    fake:
+      instance-delay-millis: 100
+      run-delay-millis: 500
+      exit-code: 0
+  limits:
+    max-script-bytes: 65536
+    max-timeout-seconds: 900
+    max-inline-output-bytes: 262144
