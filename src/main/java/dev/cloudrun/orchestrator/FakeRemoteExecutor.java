@@ -7,10 +7,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.UUID;
+
 /**
- * M2 stand-in for SsmRemoteExecutor (M3): sleeps for the configured delay
- * and exits with the configured code. exit-code != 0 exercises the
- * FAILED(SCRIPT_ERROR) path.
+ * Stand-in for SsmRemoteExecutor: sleeps for the configured delay and exits
+ * with the configured code. exit-code != 0 exercises the FAILED(SCRIPT_ERROR) path.
  */
 @Component
 @ConditionalOnProperty(prefix = "cloudrun.worker", name = "compute", havingValue = "fake")
@@ -27,13 +30,25 @@ public class FakeRemoteExecutor implements RemoteExecutor {
     }
 
     @Override
-    public ExecutionResult run(String jobId, String scriptKey, int timeoutSeconds) {
+    public void awaitReady(String instanceId, Duration timeout) {
+    }
+
+    @Override
+    public String start(String instanceId, String scriptKey, int timeoutSeconds) {
         log.info("Executing script {} (timeout {}s, exit code {})", scriptKey, timeoutSeconds, exitCode);
+        return "fake-cmd-" + UUID.randomUUID();
+    }
+
+    @Override
+    public CommandResult await(String instanceId, String commandId, Instant deadline) {
         try {
             Thread.sleep(delayMillis);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-        return new ExecutionResult(exitCode, exitCode == 0 ? "" : "fake failure (configured exit code)");
+        if (exitCode == 0) {
+            return new CommandResult(Status.SUCCESS, 0, "", "");
+        }
+        return new CommandResult(Status.FAILED, exitCode, "", "fake failure (configured exit code)");
     }
 }

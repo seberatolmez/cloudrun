@@ -7,11 +7,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * M2 stand-in for Ec2InstanceProvisioner (M3). Delays are configurable so
- * M5 chaos tests can control the pace of the fake lifecycle.
+ * Stand-in for Ec2InstanceProvisioner. Delays are configurable so tests can
+ * control the pace of the fake lifecycle.
  */
 @Component
 @ConditionalOnProperty(prefix = "cloudrun.worker", name = "compute", havingValue = "fake")
@@ -20,15 +23,17 @@ public class FakeInstanceProvisioner implements InstanceProvisioner {
     private static final Logger log = LoggerFactory.getLogger(FakeInstanceProvisioner.class);
 
     private final int delayMillis;
+    private final Set<String> running = ConcurrentHashMap.newKeySet();
 
     public FakeInstanceProvisioner(CloudrunProperties props) {
         this.delayMillis = props.worker().fake().instanceDelayMillis();
     }
 
     @Override
-    public String provision(UUID jobId) {
+    public String provision(UUID jobId, int attempt) {
         sleep();
         String instanceId = "fake-i-" + jobId;
+        running.add(instanceId);
         log.info("Provisioned fake instance {}", instanceId);
         return instanceId;
     }
@@ -36,7 +41,13 @@ public class FakeInstanceProvisioner implements InstanceProvisioner {
     @Override
     public void terminate(String instanceId) {
         sleep();
+        running.remove(instanceId);
         log.info("Terminated fake instance {}", instanceId);
+    }
+
+    @Override
+    public List<String> listManaged() {
+        return List.copyOf(running);
     }
 
     private void sleep() {
