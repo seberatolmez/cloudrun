@@ -85,6 +85,23 @@ public class JobRepository {
         });
     }
 
+    /** PROVISIONING -> RUNNING together with the SSM command id, so a running job is always traceable to its command. */
+    public boolean markRunning(UUID jobId, String commandId) {
+        return tx.execute(status -> {
+            int rows = jdbc.sql("""
+                            UPDATE jobs SET status = 'RUNNING', ssm_command_id = ?, updated_at = now()
+                            WHERE id = ? AND status = 'PROVISIONING'
+                            """)
+                    .params(commandId, jobId)
+                    .update();
+            if (rows == 0) {
+                return false;
+            }
+            recordEvent(jobId, JobStatus.PROVISIONING, JobStatus.RUNNING, null, "command " + commandId);
+            return true;
+        });
+    }
+
     /** Records the instance id and its RUNNING state after provisioning. */
     public boolean instanceReady(UUID jobId, String instanceId) {
         return tx.execute(status -> {
