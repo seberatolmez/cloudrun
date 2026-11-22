@@ -10,14 +10,21 @@ public record CloudrunProperties(Aws aws, Worker worker, Limits limits) {
             String region,
             String bucket,
             String queueName,
-            String dlqName
+            String dlqName,
+            String amiId,
+            String instanceType,
+            String instanceProfile,
+            String instanceS3Endpoint
     ) {
     }
 
     public record Worker(
             boolean enabled,
+            String compute,
             int maxConcurrentJobs,
             int pollWaitSeconds,
+            int provisioningTimeoutSeconds,
+            int ssmPollIntervalMillis,
             Fake fake
     ) {
     }

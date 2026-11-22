@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
  * FAILED(SCRIPT_ERROR) path.
  */
 @Component
-@ConditionalOnProperty(prefix = "cloudrun.worker", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "cloudrun.worker", name = "compute", havingValue = "fake")
 public class FakeRemoteExecutor implements RemoteExecutor {
 
     private static final Logger log = LoggerFactory.getLogger(FakeRemoteExecutor.class);

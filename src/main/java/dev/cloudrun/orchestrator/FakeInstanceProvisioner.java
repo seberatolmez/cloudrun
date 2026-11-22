@@ -14,7 +14,7 @@ import java.util.UUID;
  * M5 chaos tests can control the pace of the fake lifecycle.
  */
 @Component
-@ConditionalOnProperty(prefix = "cloudrun.worker", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "cloudrun.worker", name = "compute", havingValue = "fake")
 public class FakeInstanceProvisioner implements InstanceProvisioner {
 
     private static final Logger log = LoggerFactory.getLogger(FakeInstanceProvisioner.class);

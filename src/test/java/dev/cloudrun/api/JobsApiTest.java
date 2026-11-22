@@ -40,6 +40,7 @@ class JobsApiTest {
 
     @DynamicPropertySource
     static void fakeAdapterTiming(DynamicPropertyRegistry registry) {
+        registry.add("cloudrun.worker.compute", () -> "fake");
         registry.add("cloudrun.worker.fake.run-delay-millis", () -> 200);
         registry.add("cloudrun.worker.fake.instance-delay-millis", () -> 100);
         registry.add("cloudrun.worker.poll-wait-seconds", () -> 1);

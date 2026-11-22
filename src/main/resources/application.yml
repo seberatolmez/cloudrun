@@ -19,10 +19,18 @@ cloudrun:
     bucket: cloudrun-artifacts
     queue-name: cloudrun-jobs
     dlq-name: cloudrun-jobs-dlq
+    ami-id: ami-0abcdef1234567891
+    instance-type: t3.micro
+    instance-profile: ""
+    # How the instance itself reaches S3; Floci containers use the Docker host alias
+    instance-s3-endpoint: http://host.docker.internal:4566
   worker:
     enabled: true
+    compute: fake
     max-concurrent-jobs: 3
     poll-wait-seconds: 10
+    provisioning-timeout-seconds: 180
+    ssm-poll-interval-millis: 1000
     fake:
       instance-delay-millis: 100
       run-delay-millis: 500
