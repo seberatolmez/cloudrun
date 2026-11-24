@@ -140,6 +140,22 @@ class JobRepositoryTest {
     }
 
     @Test
+    void markRunningRecordsCommandIdOnlyFromProvisioning() {
+        UUID id = UUID.randomUUID();
+        repo.insert(newJob(id));
+        assertThat(repo.markRunning(id, "cmd-1")).isFalse();
+
+        repo.markQueued(id);
+        repo.claim(id);
+        assertThat(repo.markRunning(id, "cmd-1")).isTrue();
+        assertThat(repo.markRunning(id, "cmd-2")).isFalse();
+
+        Job job = repo.find(id).orElseThrow();
+        assertThat(job.status()).isEqualTo(JobStatus.RUNNING);
+        assertThat(job.ssmCommandId()).isEqualTo("cmd-1");
+    }
+
+    @Test
     void instanceLifecycleIsTrackedSeparately() {
         UUID id = UUID.randomUUID();
         repo.insert(newJob(id));
